@@ -1,1 +1,6 @@
 "# DonkeyKongLite" 
+Project overview: Create a graphical window application using Java Swing.
+I chose to make a simple version of the classic Nintendo game "Donkey Kong". The game includes a controllable sprite, platforms with collision, obstacles with collision, a points tracker, a score saver, a leaderboard button, and a boss with collision. 
+To run the program, user must have VS Code or similar IDE with Java Swing render capability. To launch game, select "DonkeyKongLite.java" and use the launch button, or use the "Run" menu item. 
+The goal of this project is to test my understanding of layout managers, user interaction, event handling, file I/O, collision detection, and OOP through the use of abstract classes and inheritance. 
+Note: Score saving will not display properly unless the highscores.txt (which is created automatically) has an empty line at the bottom of the file. Otherwise, a score will be saved in the same line as the lowest existing score and will overlap when displaying. 
