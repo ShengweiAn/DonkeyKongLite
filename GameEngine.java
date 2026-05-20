@@ -6,15 +6,18 @@ import java.awt.Color;
 import java.awt.Font;
 
 public class GameEngine extends JPanel implements ActionListener {
+    //tracks the current state of the game for screen switching
     private enum GameState {
         MENU,
         GAME,
         LEADERBOARD
     }
+    //main menu initialization of fields
     private GameState currentState = GameState.MENU; 
 
     private Timer gameTimer;
     private Player player;
+    //array lists for different entities
     private ArrayList<Obstacle> barrels;
     private ArrayList<Platform> platforms;
     private ArrayList<Ladder> ladders;
@@ -26,13 +29,16 @@ public class GameEngine extends JPanel implements ActionListener {
     private boolean gameOver = false;
     private boolean gameWon = false; 
     
+    //boolean statements for player movement
     private boolean left, right, up, down;
     
+    //buttons in menus
     private JButton newGameButton;
     private JButton leaderboardButton;
     private JButton backToMenuButton;
     private JButton restartButton; 
 
+    //game engine controls most of the game's logic
     public GameEngine(JButton restartButton) {
         this.restartButton = restartButton;
         setFocusable(true);
@@ -43,13 +49,14 @@ public class GameEngine extends JPanel implements ActionListener {
             this.restartButton.setVisible(false);
             this.restartButton.addActionListener(e -> initGame());
             add(this.restartButton);
-        }
+        } //above code ensures the restart button only appears when the game ends (restartbutton becomes null)
 
         initMenuButtons();
         
         gameTimer = new Timer(20, this);
         gameTimer.start();
         
+        //player controls for keypress and keyrelease
         addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
                 if (currentState != GameState.GAME) return; 
@@ -67,9 +74,10 @@ public class GameEngine extends JPanel implements ActionListener {
         });
     }
 
+    //initialize buttons in the main menu, locations, and functions
     private void initMenuButtons() {
         newGameButton = new JButton("NEW GAME");
-        newGameButton.setBounds(300, 200, 200, 50); // Shifted up slightly to accommodate the new details section
+        newGameButton.setBounds(300, 200, 200, 50);
         newGameButton.addActionListener(e -> startNewGame());
         add(newGameButton);
 
@@ -86,6 +94,7 @@ public class GameEngine extends JPanel implements ActionListener {
     }
 
     private void startNewGame() {
+        //upon starting a new game, automatically set default states for most relevant variables like controls and button visibility
         left = false;
         right = false;
         up = false;
@@ -104,18 +113,23 @@ public class GameEngine extends JPanel implements ActionListener {
         gameOver = false;
         gameWon = false; 
         
+        //adding platforms
         platforms.add(new Platform(0, 210, 700, 15, 245)); 
         platforms.add(new Platform(100, 355, 700, 15, 320)); 
         platforms.add(new Platform(0, 430, 700, 15, 465)); 
         platforms.add(new Platform(0, 540, 800, 20, 540));
 
+        //adding ladder
         ladders.add(new Ladder(500, 340, 30, 80)); 
 
+        //adding hammers
         hammers = new ArrayList<>();
         hammers.add(new Hammer(200, 400)); 
 
+        //adding boss
         donkeyKong = new Boss(30, 160); 
 
+        //set the gamestate
         currentState = GameState.GAME;
         requestFocusInWindow(); 
     }
@@ -124,6 +138,7 @@ public class GameEngine extends JPanel implements ActionListener {
         startNewGame();
     }
 
+    //method sets the game state to leaderboard and shows some buttons
     private void showLeaderboardView() {
         currentState = GameState.LEADERBOARD;
         newGameButton.setVisible(false);
@@ -139,6 +154,7 @@ public class GameEngine extends JPanel implements ActionListener {
         repaint();
     }
 
+    //method returns the game to main menu state
     private void showMainMenuView() {
         currentState = GameState.MENU;
         newGameButton.setVisible(true);
@@ -160,6 +176,7 @@ public class GameEngine extends JPanel implements ActionListener {
 
         secondsElapsed++;
         
+        //ladder logic
         boolean overlappingLadder = false;
         for (Ladder l : ladders) {
             if (player.getBounds().intersects(l.getBounds())) {
@@ -174,8 +191,10 @@ public class GameEngine extends JPanel implements ActionListener {
             player.isClimbing = true; 
         }
 
+        //player position update
         player.update(left, right, up, down);
 
+        //hammer logic with respawn timer
         for (Hammer h : hammers) {
             if (!h.collected) {
                 if (player.getBounds().intersects(h.getBounds())) {
@@ -192,16 +211,19 @@ public class GameEngine extends JPanel implements ActionListener {
             }
         }
 
+        //player position constraint within the window (works better on windows as it accounts for 14px discrepancy)
         if (player.x < 0) player.x = 0; 
         if (player.x > 800 - player.width - 14) {
             player.x = 800 - player.width - 14; 
         }
 
+        //win condition when player collides with boss
         if (donkeyKong != null && player.getBounds().intersects(donkeyKong.getBounds())) {
             triggerWin();
             return;
         }
 
+        //player movement logic when on platforms
         if (!player.isClimbing) {
             for (Platform p : platforms) {
                 int playerCenterX = player.x + player.width / 2;
@@ -217,15 +239,18 @@ public class GameEngine extends JPanel implements ActionListener {
             }
         }
 
+        //difficulty scaling over time (secondsElapsed)
         int difficultyLevel = (secondsElapsed / 500) + 1;
         score += difficultyLevel;
 
+        //difficulty scaling for barrels
         if (secondsElapsed % Math.max(25, (120 - (difficultyLevel * 5))) == 0) {
             Obstacle newBarrel = new Obstacle(20, 175, 3 + difficultyLevel);
             newBarrel.dx = 3 + difficultyLevel; 
             barrels.add(newBarrel);
         }
 
+        //barrel logic (obstacles)
         for (int i = 0; i < barrels.size(); i++) {
             Obstacle b = barrels.get(i);
             b.update();
@@ -251,22 +276,24 @@ public class GameEngine extends JPanel implements ActionListener {
             }
             if (!barrelTouchedPlatform) b.onPlatform = false; 
             
+            //collision logic between player and barrels
             if (b.getBounds().intersects(player.getBounds())) {
-                if (player.hasHammer) {
+                if (player.hasHammer) { //player is rewarded for destroying barrels while powerup hammer is active
                     score += 500; 
                     barrels.remove(i);
                     i--; 
                     continue;
-                } else {
+                } else { //player loses when colliding with barrel normally
                     endGame();
                 }
             }
-            
+            //remove barrel when it goes off screen
             if (b.x < -40 || b.x > 840 || b.y > 600) barrels.remove(i);
         }
         repaint();
     }
 
+    //end of game logic (screens)
     private void endGame() {
         gameOver = true;
         if (restartButton != null) restartButton.setVisible(true);
@@ -277,6 +304,7 @@ public class GameEngine extends JPanel implements ActionListener {
         
         paintImmediately(0, 0, getWidth(), getHeight());
         
+        //game over message on screen and shows input UI for player to save score
         String initials = JOptionPane.showInputDialog(
             this, 
             "Game Over! Score: " + score + "\nEnter Initials:", 
@@ -284,6 +312,7 @@ public class GameEngine extends JPanel implements ActionListener {
             JOptionPane.PLAIN_MESSAGE
         );
         
+        //logic for score saving
         if (initials != null && !initials.isEmpty()) {
             ScoreManager scoreManager = new ScoreManager();
             scoreManager.saveScore(initials.toUpperCase(), score);
@@ -291,6 +320,7 @@ public class GameEngine extends JPanel implements ActionListener {
         repaint();
     }
 
+    //win logic, similar to endGame()
     private void triggerWin() {
         gameWon = true;
         gameOver = true; 
@@ -304,6 +334,7 @@ public class GameEngine extends JPanel implements ActionListener {
         
         paintImmediately(0, 0, getWidth(), getHeight());
         
+        //shows a victory message instead of a game over message
         String initials = JOptionPane.showInputDialog(
             this, 
             "VICTORY! You Beat Donkey Kong!\nFinal Score: " + score + "\nEnter Initials:", 
@@ -318,6 +349,7 @@ public class GameEngine extends JPanel implements ActionListener {
         repaint();
     }
 
+    //draw different screens
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -334,6 +366,7 @@ public class GameEngine extends JPanel implements ActionListener {
         }
     }
 
+    //screen components, mostly visual with no logic code
     private void drawMenuScreen(Graphics g) {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
@@ -361,6 +394,7 @@ public class GameEngine extends JPanel implements ActionListener {
         g.drawString("• Scoring: Smash Barrel: +500 PTS  |  Reach Boss at Top Platform: VICTORY +10,000 PTS!", 130, infoY + 75);
     }
 
+    //leaderboard screen draw
     private void drawLeaderboardScreen(Graphics g) {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
@@ -378,7 +412,7 @@ public class GameEngine extends JPanel implements ActionListener {
         int drawY = 150;
         if (highScores == null || highScores.isEmpty()) {
             g.drawString("No records logged yet!", 280, drawY);
-        } else {
+        } else { //auto sort the top 10 displayed scores
             int listedCount = 0;
             for (int i = 0; i < highScores.size(); i++) {
                 if (listedCount >= 10) break;
@@ -392,6 +426,7 @@ public class GameEngine extends JPanel implements ActionListener {
         }
     }
 
+    //couple of drawn components during/outside of the game
     private void drawActiveGameScreen(Graphics g) {
         if (gameOver) {
             g.setColor(Color.BLACK);
@@ -419,11 +454,13 @@ public class GameEngine extends JPanel implements ActionListener {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
 
+        //in-game score tracker
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 12));
         g.drawString("Score: " + score, 20, 20);
         g.drawString("Time Multiplier: x" + (secondsElapsed / 500 + 1), 20, 40);
         
+        //draw all entity components
         for (Platform p : platforms) p.draw(g);
         for (Ladder l : ladders) l.draw(g); 
         for (Hammer h : hammers) h.draw(g); 

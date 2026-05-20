@@ -14,14 +14,15 @@ public class Hammer extends Entity {
     public void draw(Graphics g) {
         if (collected) return;
 
-        // Draw Hammer Handle (Wood Brown)
+        // Hammer handle
         g.setColor(new Color(139, 69, 19));
         g.fillRect(x + 8, y + 8, 4, 12);
 
-        // Draw Hammer Head (Iron Gray)
+        // Hammer head
         g.setColor(Color.LIGHT_GRAY);
         g.fillRect(x + 2, y + 2, 16, 6);
         
+        //Hammer black border
         g.setColor(Color.BLACK);
         g.drawRect(x + 2, y + 2, 16, 6);
     }
